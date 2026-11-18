@@ -175,36 +175,58 @@ document.getElementById('year').onchange = e => setYear(e.target.value);
 
 /* ---------- 年份图层：1978 / 1984（A003、A004 各一层） ---------- */
 const L1978 = L.tileLayer('xyz_1978_webp/{z}/{x}/{y}.webp?v=v3', {
-  minZoom: 10, maxZoom: 17, maxNativeZoom: 16, pane: 'histPane',
+  minZoom: 10, maxZoom: 18, maxNativeZoom: 16, pane: 'histPane',
   attribution: '1978-07-28 · USGS D3C1214-401032F004'
 });
 const L84 = {
   '003': L.tileLayer('xyz_1984_003_webp/{z}/{x}/{y}.webp?v=v3', {
-    minZoom: 9, maxZoom: 16, maxNativeZoom: 16, pane: 'histPane',
+    minZoom: 9, maxZoom: 18, maxNativeZoom: 16, pane: 'histPane',
     attribution: '1984-01-03 · USGS D3C1218-301275A003'
   }),
   '004': L.tileLayer('xyz_1984_004_webp/{z}/{x}/{y}.webp?v=v3', {
-    minZoom: 9, maxZoom: 16, maxNativeZoom: 16, pane: 'histPane',
+    minZoom: 9, maxZoom: 18, maxNativeZoom: 16, pane: 'histPane',
     attribution: '1984-01-03 · USGS D3C1218-301275A004'
   })
 };
+const L84Z = {
+  '003': L.tileLayer('xyz_1984_003_z17/{z}/{x}/{y}.webp?v=v1', {
+    minZoom: 17, maxZoom: 18, maxNativeZoom: 17, pane: 'histPane',
+    errorTileUrl: BLANK_PX
+  }),
+  '004': L.tileLayer('xyz_1984_004_z17/{z}/{x}/{y}.webp?v=v1', {
+    minZoom: 17, maxZoom: 18, maxNativeZoom: 17, pane: 'histPane',
+    errorTileUrl: BLANK_PX
+  })
+};
+
 const SUB = {
   1978: '1978-07-28 · 相机 F · 原片 2–4 ft<br>a+b+c 三段拼接 · 113.80–115.01°E / 30.40–30.72°N',
   1984: '1984-01-03 · 原片 ≈2.0 m<br>A003 北景 / A004 南景（两层）· 113.69–114.65°E / 30.38–30.80°N'
 };
 let activeYear = 1978;
 
+const SCENES84 = ['003', '004'];
+function sceneOn(k) { return document.getElementById('c' + k).checked; }
+function syncZ17() {
+  if (activeYear !== 1984) return;
+  const on = map.getZoom() >= 17;
+  SCENES84.forEach(k => {
+    const want = on && sceneOn(k);
+    if (want && !map.hasLayer(L84Z[k])) L84Z[k].addTo(map);
+    if (!want && map.hasLayer(L84Z[k])) map.removeLayer(L84Z[k]);
+  });
+}
 function applyYear() {
   const y = activeYear;
-  [L1978, L84['003'], L84['004']].forEach(l => { if (map.hasLayer(l)) map.removeLayer(l); });
+  [L1978, L84['003'], L84['004'], L84Z['003'], L84Z['004']].forEach(l => { if (map.hasLayer(l)) map.removeLayer(l); });
   const box = document.getElementById('sceneBox');
   if (y === 1978) {
     box.style.display = 'none';
     L1978.addTo(map);
   } else {
     box.style.display = 'block';
-    if (document.getElementById('c003').checked) L84['003'].addTo(map);
-    if (document.getElementById('c004').checked) L84['004'].addTo(map);
+    SCENES84.forEach(k => { if (sceneOn(k)) L84[k].addTo(map); });
+    syncZ17();
   }
   document.getElementById('year').value = String(y);
   document.getElementById('sceneSub').innerHTML = SUB[y];
@@ -215,6 +237,7 @@ function applyYear() {
 function setYear(y) { activeYear = (y == 1984) ? 1984 : 1978; applyYear(); }
 document.getElementById('c003').onchange = applyYear;
 document.getElementById('c004').onchange = applyYear;
+map.on('zoomend', syncZ17);
 
 /* ---------- z17：只在城区圈内切片 ---------- */
 const CITY_BOX = [
