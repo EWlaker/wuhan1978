@@ -45,6 +45,15 @@
                   box-shadow:0 1px 6px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;
                   font-size:13px;color:#3a2a00}
   #swipeBar.dragging .knob{background:#ffd166;transform:scale(1.12)}
+  /* 手机端：上下拉 */
+  #swipeBar.vbar{bottom:auto;height:0;width:100%;left:0!important}
+  #swipeBar.vbar .line{top:-1px;left:0;right:0;width:auto;height:3px}
+  #swipeBar.vbar .hit{left:0;right:0;top:-22px;bottom:auto;height:46px;width:auto;cursor:ns-resize}
+  #swipeBar.vbar .knob{left:50%;margin-left:-18px;top:-18px;margin-top:0;transform:rotate(90deg)}
+  #swipeBar.vbar.dragging .knob{transform:rotate(90deg) scale(1.12)}
+  #swipeBar.vbar .tag{top:auto;left:auto;right:12px}
+  #swipeBar.vbar .tag.l{bottom:12px}
+  #swipeBar.vbar .tag.r{top:12px}
   #swipeBar .tag{position:absolute;top:12px;white-space:nowrap;background:rgba(255,255,255,.92);
                  border-radius:4px;padding:3px 8px;font-size:12px;color:#333;pointer-events:none;
                  box-shadow:0 1px 4px rgba(0,0,0,.25)}
@@ -183,7 +192,7 @@ const qs = new URLSearchParams(location.search);
 /* ---------------- 年份与瓦片定义 ---------------- */
 const YEARDEF = {
   '1966': {
-    name: '1966-08-22 · 武汉',
+    name: '1966-08-22',
     sub: '1966-08-22 · 原片 ≈2.5 m<br>c / d 两幅 · 114.13–114.57°E / 30.32–30.80°N',
     scenes: {
       '1966c': {url: 'xyz_1966_c_webp/{z}/{x}/{y}.webp?v=v7', minZoom: 10, attr: '1966 · c 幅'},
@@ -195,7 +204,7 @@ const YEARDEF = {
     }
   },
   '1978': {
-    name: '1978-07-28 · 武汉—鄂州',
+    name: '1978-07-28',
     sub: '1978-07-28 · 相机 F · 原片 2–4 ft<br>a+b+c 三段拼接 · 113.80–115.01°E / 30.40–30.72°N',
     scenes: {
       '1978': {url: 'xyz_1978_webp/{z}/{x}/{y}.webp?v=v3', minZoom: 10, attr: '1978-07-28 · USGS D3C1214-401032F004'}
@@ -204,7 +213,7 @@ const YEARDEF = {
     z17city: 'xyz_1978_z17/{z}/{x}/{y}.webp?v=v3'
   },
   '1984': {
-    name: '1984-01-03 · 汉口北—黄陂',
+    name: '1984-01-03',
     sub: '1984-01-03 · 原片 ≈2.0 m<br>A003 北景 / A004 南景（两层）· 113.69–114.65°E / 30.38–30.80°N',
     scenes: {
       '003': {url: 'xyz_1984_003_webp/{z}/{x}/{y}.webp?v=v3', minZoom: 9, attr: '1984-01-03 · USGS D3C1218-301275A003'},
@@ -218,8 +227,8 @@ const YEARDEF = {
 };
 const BASE_CHOICES = [
   ['base',   '底图'],
-  ['1966',   '1966-08-22 影像'],
-  ['1978',   '1978-07-28 影像'],
+  ['1966',   '1966-08-22'],
+  ['1978',   '1978-07-28'],
   ['1984',   '1984-01-03 影像']
 ];
 const CITY_BOX = [
@@ -487,26 +496,49 @@ function clipPane(pane, x0, x1, y0, y1) {
   pane.style.webkitClipPath = v;
   pane.style.willChange = 'clip-path';
 }
+function swipeVertical() {
+  return window.matchMedia('(max-width: 760px)').matches;
+}
 function applySwipe() {
+  const vertical = swipeVertical();
+  bar.classList.toggle('vbar', vertical);
+  const sub = document.getElementById('swipeSub');
+  if (sub) sub.textContent = vertical ? '上下拖动中间的分界线' : '左右拖动中间的分界线';
+  const sub2 = document.getElementById('dualSub');
+  if (sub2) sub2.textContent = vertical ? '上下两图平移 / 缩放联动' : '两侧平移 / 缩放联动，各层按年份整幅显示';
   if (state.mode !== 'swipe') {
     mapA.getPane('topPane').style.clipPath = '';
     mapA.getPane('botPane').style.clipPath = '';
     return;
   }
   const r = document.getElementById('mapA').getBoundingClientRect();
-  const x = r.left + r.width * swipePct / 100;
   const top = mapA.getPane('topPane'), bot = mapA.getPane('botPane');
   top.style.width = r.width + 'px'; top.style.height = r.height + 'px';
   bot.style.width = r.width + 'px'; bot.style.height = r.height + 'px';
-  clipPane(top, r.left, x, r.top, r.top + r.height);                     // 上：左半边
-  clipPane(bot, x, r.left + r.width, r.top, r.top + r.height);           // 下：右半边
-  bar.style.left = (r.left + r.width * swipePct / 100) + 'px';
-  bar.style.top = r.top + 'px';
-  bar.style.height = r.height + 'px';
+  if (vertical) {
+    const y = r.top + r.height * swipePct / 100;
+    clipPane(top, r.left, r.left + r.width, r.top, y);                  // 上：上半
+    clipPane(bot, r.left, r.left + r.width, y, r.top + r.height);        // 下：下半
+    bar.style.left = r.left + 'px';
+    bar.style.top = y + 'px';
+    bar.style.width = r.width + 'px';
+    bar.style.height = '0px';
+  } else {
+    const x = r.left + r.width * swipePct / 100;
+    clipPane(top, r.left, x, r.top, r.top + r.height);                   // 上：左半
+    clipPane(bot, x, r.left + r.width, r.top, r.top + r.height);         // 下：右半
+    bar.style.left = x + 'px';
+    bar.style.top = r.top + 'px';
+    bar.style.height = r.height + 'px';
+    bar.style.width = '0px';
+  }
 }
-function setSwipePct(clientX) {
+function setSwipePct(clientX, clientY) {
   const r = document.getElementById('mapA').getBoundingClientRect();
-  swipePct = Math.min(98, Math.max(2, (clientX - r.left) / r.width * 100));
+  const v = swipeVertical()
+    ? (clientY - r.top) / r.height
+    : (clientX - r.left) / r.width;
+  swipePct = Math.min(98, Math.max(2, v * 100));
   applySwipe();
 }
 let dragging = false;
@@ -524,7 +556,7 @@ function moveDrag(e) {
   if (e.buttons === 0 && !e.touches) { endDrag(); return; }
   const t = e.touches ? e.touches[0] : e;
   if (!t) return;
-  setSwipePct(t.clientX);
+  setSwipePct(t.clientX, t.clientY);
   if (e.cancelable) e.preventDefault();
 }
 function endDrag() {
@@ -608,6 +640,7 @@ document.getElementById('panelTitle').onclick = () => {
 };
 window.addEventListener('resize', () => {
   if (!isMobile()) panelEl.classList.remove('folded');
+  if (state.mode === 'swipe') applySwipe();
 });
 
 /* ---------------- 初始化 ---------------- */
