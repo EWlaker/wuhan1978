@@ -160,6 +160,7 @@
   <button id="aboutBtn" title="数据说明">i</button>
 </div>
 <div id="about">
+  <b style="color:#2f6fd0">页面版本 v2</b><br>
   <b>数据来源</b><br>
   USGS EarthExplorer「Declassified Satellite Imagery 3」，黑白负片扫描：<br>
   · <b>1966-08-22</b>　<code>DZB00403100086H012002</code> c / d 两幅<br>
@@ -479,27 +480,24 @@ function setClip(pane, poly) {
   pane.style.webkitClipPath = poly;
   pane.style.willChange = 'clip-path';
 }
-/** axis='x'：按 content x 切（左/右）；axis='y'：按 content y 切（上/下） */
-function clipFirst(pane, S, axis, cut) {
+/**
+ * 在「舞台坐标」里给定一个区间 [from, to]，裁剪到 pane 本地坐标。
+ * pane 会随 Leaflet 平移而偏移，所以坐标要减去 pane 自身原点，允许为负/超出。
+ * axis='x'：保留 content x 在 [from,to] 的部分；axis='y'：保留 content y 的部分。
+ */
+function clipRange(pane, S, axis, from, to) {
   const b = paneLocal(pane, S);
   if (!b.w || !b.h) return;
   if (axis === 'x') {
-    const a = Math.max(0, Math.min(b.w, cut - b.x0));
-    setClip(pane, 'polygon(0 0, ' + a + 'px 0, ' + a + 'px 100%, 0 100%)');
+    const a = from - b.x0, c = to - b.x0;
+    const yA = 0 - b.y0, yB = S.h - b.y0;
+    setClip(pane, 'polygon(' + a + 'px ' + yA + 'px, ' + c + 'px ' + yA + 'px, ' +
+                    c + 'px ' + yB + 'px, ' + a + 'px ' + yB + 'px)');
   } else {
-    const a = Math.max(0, Math.min(b.h, cut - b.y0));
-    setClip(pane, 'polygon(0 0, 100% 0, 100% ' + a + 'px, 0 ' + a + 'px)');
-  }
-}
-function clipSecond(pane, S, axis, cut) {
-  const b = paneLocal(pane, S);
-  if (!b.w || !b.h) return;
-  if (axis === 'x') {
-    const a = Math.max(0, Math.min(b.w, cut - b.x0));
-    setClip(pane, 'polygon(' + a + 'px 0, 100% 0, 100% 100%, ' + a + 'px 100%)');
-  } else {
-    const a = Math.max(0, Math.min(b.h, cut - b.y0));
-    setClip(pane, 'polygon(0 ' + a + 'px, 100% ' + a + 'px, 100% 100%, 0 100%)');
+    const a = from - b.y0, c = to - b.y0;
+    const xA = 0 - b.x0, xB = S.w - b.x0;
+    setClip(pane, 'polygon(' + xA + 'px ' + a + 'px, ' + xB + 'px ' + a + 'px, ' +
+                    xB + 'px ' + c + 'px, ' + xA + 'px ' + c + 'px)');
   }
 }
 
@@ -524,8 +522,9 @@ function applySwipe() {
   // content 坐标系里的切割位置
   const axis = (vertical ? 'y' : 'x');
   const cut = (axis === 'y' ? S.h : S.w) * swipePct / 100;
-  clipFirst(top, S, axis, cut);
-  clipSecond(bot, S, axis, cut);
+  const span = (axis === 'y' ? S.h : S.w);
+  clipRange(top, S, axis, 0, cut);
+  clipRange(bot, S, axis, cut, span);
 
   // 把手：竖屏/横屏都显示成屏幕上的横线（在 content 里是 x 轴切割时也一样）
   if (vertical || isRot()) {
@@ -667,6 +666,7 @@ rotBtn.onclick = async () => {
   setTimeout(() => { tip.textContent = ''; }, 4000);
 };
 
+document.title = document.title + ' · v2';
 /* ---------------- 初始化 ---------------- */
 const chipA = document.createElement('div');
 chipA.className = 'chip'; chipA.id = 'chipA'; chipA.style.display = 'none';
