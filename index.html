@@ -49,9 +49,9 @@
 <div class="panel">
   <h1>武汉 · KH-9 解密影像</h1>
   <label style="margin-top:5px">年份 <select id="year">
+    <option value="1966">1966-08-22</option>
     <option value="1978">1978-07-28</option>
     <option value="1984">1984-01-03</option>
-    <option value="1966">1966-08-22</option>
   </select></label>
   <div id="sceneBox" style="display:none">
     <label><input type="checkbox" id="c003" checked>A003 北景</label>
@@ -207,6 +207,14 @@ const L84Z = {
   }),
   '004': L.tileLayer('xyz_1984_004_z17/{z}/{x}/{y}.webp?v=v1', {
     minZoom: 17, maxZoom: 18, maxNativeZoom: 17, pane: 'histPane', errorTileUrl: BLANK_PX
+  }),
+  '1966c': L.tileLayer('xyz_1966_c_z17/{z}/{x}/{y}.webp?v=v1', {
+    minZoom: 17, maxZoom: 18, maxNativeZoom: 17, pane: 'histPane', errorTileUrl: BLANK_PX,
+    attribution: '1966 · 二环内 z17'
+  }),
+  '1966d': L.tileLayer('xyz_1966_d_z17/{z}/{x}/{y}.webp?v=v1', {
+    minZoom: 17, maxZoom: 18, maxNativeZoom: 17, pane: 'histPane', errorTileUrl: BLANK_PX,
+    attribution: '1966 · 二环内 z17'
   })
 };
 
@@ -222,10 +230,10 @@ function sceneOn(k) { return document.getElementById('c' + k).checked; }
 function boxFor(y) { return document.getElementById(y === 1966 ? 'sceneBox66' : 'sceneBox'); }
 
 function syncZ17() {
-  if (activeYear !== 1984) return;
+  const keys = YEAR_SCENES[activeYear] || [];
   const on = map.getZoom() >= 17;
-  ['003', '004'].forEach(k => {
-    const want = on && sceneOn(k);
+  Object.keys(L84Z).forEach(k => {
+    const want = on && keys.indexOf(k) >= 0 && sceneOn(k);
     if (want && !map.hasLayer(L84Z[k])) L84Z[k].addTo(map);
     if (!want && map.hasLayer(L84Z[k])) map.removeLayer(L84Z[k]);
   });
@@ -242,7 +250,7 @@ function applyYear() {
   } else {
     boxFor(y).style.display = 'block';
     YEAR_SCENES[y].forEach(k => { if (sceneOn(k)) LYEAR[k].addTo(map); });
-    if (y === 1984) syncZ17();
+    syncZ17();
   }
   document.getElementById('year').value = String(y);
   document.getElementById('sceneSub').innerHTML = SUB[y];
