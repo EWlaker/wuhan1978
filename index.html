@@ -306,36 +306,32 @@ function paneSize() {
 function applySwipe() {
   const on = swipeBox.checked;
   bar.classList.toggle('on', on);
-  [tilePaneEl, basePaneEl].forEach(el => {
-    if (!el) return;
-    el.style.clipPath = '';
-    if (!on) { el.style.clip = ''; }
-  });
-  if (!on) return;
-
-  // Leaflet 的 pane 跟随 .leaflet-map-pane 平移，裁剪边界要按 pane 当前屏幕位置反算
+  if (!on) {
+    tilePaneEl.style.clipPath = '';
+    tilePaneEl.style.webkitClipPath = '';
+    tilePaneEl.style.willChange = '';
+    basePaneEl.style.clipPath = '';
+    return;
+  }
+  // 只裁历史图层：底图压在下面，右半边自然会露出来（少一半重算，拖动更跟手）
   const sz = map.getSize();
   const cRect = map.getContainer().getBoundingClientRect();
   const boundary = cRect.left + sz.x * swipePct / 100;
-  [tilePaneEl, basePaneEl].forEach(el => {
-    if (!el) return;
-    el.style.width = sz.x + 'px';
-    el.style.height = sz.y + 'px';
-    el.style.clip = '';
-    el.style.clipPath = '';
-  });
-  const clipFor = (el, keepLeft) => {
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const w = Math.max(0, Math.min(sz.x, boundary - r.left));
-    el.style.clipPath = keepLeft
-      ? 'inset(0px ' + (sz.x - w) + 'px 0px 0px)'
-      : 'inset(0px 0px 0px ' + w + 'px)';
-  };
-  clipFor(tilePaneEl, true);
-  clipFor(basePaneEl, false);
+  if (tilePaneEl.style.width !== sz.x + 'px') {
+    tilePaneEl.style.width = sz.x + 'px';
+    tilePaneEl.style.height = sz.y + 'px';
+  }
+  basePaneEl.style.clipPath = '';
+  tilePaneEl.style.willChange = 'clip-path';
+  const r = tilePaneEl.getBoundingClientRect();
+  const w = Math.max(0, Math.min(sz.x, boundary - r.left));
+  const clip = 'inset(0px ' + (sz.x - w) + 'px 0px 0px)';
+  tilePaneEl.style.clipPath = clip;
+  tilePaneEl.style.webkitClipPath = clip;
   bar.style.left = swipePct + '%';
 }
+
+
 
 function setSwipePct(clientX) {
   const r = map.getContainer().getBoundingClientRect();
