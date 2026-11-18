@@ -50,13 +50,48 @@
                  box-shadow:0 1px 4px rgba(0,0,0,.25)}
   #swipeBar .tag.l{right:14px}
   #swipeBar .tag.r{left:14px}
+
+  .panel .fold{display:none;float:right;color:#888;font-size:13px}
+  .panel.folded #panelBody{display:none}
+  #swipeBar .hit{touch-action:none}
+  html,body{overscroll-behavior:none}
+
+  @media (max-width: 760px){
+    .panel{left:8px;right:8px;top:auto;bottom:8px;max-width:none;font-size:12.5px;
+           line-height:1.6;padding:8px 11px;border-radius:12px;max-height:62vh;overflow:auto}
+    .panel h1{font-size:14px;margin-bottom:4px}
+    .panel .fold{display:inline}
+    .panel.folded{max-height:none;overflow:visible}
+    .panel select{font-size:13px;padding:5px 6px}
+    .panel label{padding:2px 0}
+    .panel input[type=checkbox]{width:16px;height:16px}
+    .panel input[type=range]{height:24px}
+    #toolbar{top:8px;right:8px;left:8px;justify-content:flex-end;gap:5px}
+    #toolbar button{padding:8px 10px;font-size:12.5px;border-radius:9px}
+    #aboutBtn{width:34px;height:34px;font-size:15px}
+    #about{left:8px;right:8px;top:56px;max-width:none;max-height:70vh;overflow:auto;font-size:12px}
+    #hint{display:none}
+    .chip{font-size:11.5px;padding:4px 8px;top:auto;bottom:56px}
+    #chipA{right:8px}
+    #chipB{left:8px}
+    body.dual #stage{flex-direction:column}
+    body.dual #mapB{border-left:0;border-top:2px solid #fff}
+    #swipeBar .hit{left:-22px;width:44px}
+    #swipeBar .knob{width:36px;height:36px;left:-18px;margin-top:-18px;font-size:15px}
+    #swipeBar .tag{font-size:11.5px;padding:4px 7px}
+    .leaflet-bottom{bottom:54px}
+    .leaflet-control-attribution{font-size:10px;max-width:70vw}
+    .leaflet-control-zoom a{width:34px;height:34px;line-height:34px;font-size:18px}
+    .leaflet-pane.leaflet-top{top:46px}
+  }
 </style>
 </head>
 <body>
 <div id="stage"><div id="mapA"></div><div id="mapB"></div></div>
 
 <div class="panel">
-  <h1>武汉 · KH-9 解密影像</h1>
+  <h1 id="panelTitle">武汉 · KH-9 解密影像<span class="fold">▾</span></h1>
+  <div id="panelBody">
 
   <!-- 单图 -->
   <div id="uiSingle">
@@ -104,6 +139,7 @@
     <span class="val" id="opaVal">100</span>
   </div>
   <div class="sub" id="tip" style="margin-top:4px"></div>
+  </div>
 </div>
 
 <div id="toolbar">
@@ -559,6 +595,19 @@ document.querySelectorAll('#toolbar button[data-mode]').forEach(b => {
 mapA.on('mousemove', ev => {
   document.getElementById('hint').textContent =
     'N' + ev.latlng.lat.toFixed(4) + '  E' + ev.latlng.lng.toFixed(4) + '  ·  z' + mapA.getZoom();
+});
+
+
+/* ---------------- 移动端：面板折叠 ---------------- */
+const panelEl = document.querySelector('.panel');
+const isMobile = () => window.matchMedia('(max-width: 760px)').matches;
+if (isMobile() && qs.get('panel') !== 'open') { panelEl.classList.add('folded'); }
+document.getElementById('panelTitle').onclick = () => {
+  if (!isMobile()) return;
+  panelEl.classList.toggle('folded');
+};
+window.addEventListener('resize', () => {
+  if (!isMobile()) panelEl.classList.remove('folded');
 });
 
 /* ---------------- 初始化 ---------------- */
