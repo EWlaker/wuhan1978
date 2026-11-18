@@ -143,7 +143,7 @@
   </div>
 
   <hr>
-  <label>底图 <select id="base">
+  <label>底图（两侧共用） <select id="base">
     <option value="none">空白</option>
     <option value="osm">OpenStreetMap</option>
   </select></label>
@@ -164,7 +164,7 @@
   <button id="aboutBtn" title="数据说明">i</button>
 </div>
 <div id="about">
-  <b style="color:#2f6fd0">页面版本 v3</b><br>
+  <b style="color:#2f6fd0">页面版本 v4</b><br>
   <b>数据来源</b><br>
   USGS EarthExplorer「Declassified Satellite Imagery 3」，黑白负片扫描：<br>
   · <b>1966-08-22</b>　<code>DZB00403100086H012002</code> c / d 两幅<br>
@@ -231,7 +231,7 @@ const YEARDEF = {
   }
 };
 const BASE_CHOICES = [
-  ['none',   '空白'],
+  ['none',   '无'],
   ['osm',    'OpenStreetMap'],
   ['1966',   '1966-08-22'],
   ['1978',   '1978-07-28'],
@@ -396,7 +396,7 @@ function renderSwipe() {
   applySwipe();
 }
 function labelOf(k) {
-  if (k === 'none' || k === 'base') return '空白';
+  if (k === 'none' || k === 'base') return '无';
   if (k === 'osm') return 'OpenStreetMap';
   return YEARDEF[k] ? YEARDEF[k].name : k;
 }
@@ -689,7 +689,7 @@ rotBtn.onclick = async () => {
   setTimeout(() => { tip.textContent = ''; }, 4000);
 };
 
-document.title = document.title + ' · v3';
+document.title = document.title + ' · v4';
 /* ---------------- 初始化 ---------------- */
 const chipA = document.createElement('div');
 chipA.className = 'chip'; chipA.id = 'chipA'; chipA.style.display = 'none';
