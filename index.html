@@ -313,19 +313,21 @@ function applySwipe() {
     basePaneEl.style.clipPath = '';
     return;
   }
-  // 只裁历史图层：底图压在下面，右半边自然会露出来（少一半重算，拖动更跟手）
+  // 只裁历史图层：底图压在下面，右半边自然露出来
   const sz = map.getSize();
   const cRect = map.getContainer().getBoundingClientRect();
   const boundary = cRect.left + sz.x * swipePct / 100;
-  if (tilePaneEl.style.width !== sz.x + 'px') {
-    tilePaneEl.style.width = sz.x + 'px';
-    tilePaneEl.style.height = sz.y + 'px';
-  }
   basePaneEl.style.clipPath = '';
   tilePaneEl.style.willChange = 'clip-path';
+  // 关键：pane 会跟着 Leaflet 的平移偏移，裁剪坐标必须换算到 pane 本地坐标系，
+  // 并且用 polygon（允许负坐标）覆盖整个视口，inset() 在这里会裁掉盒子左侧的内容
   const r = tilePaneEl.getBoundingClientRect();
-  const w = Math.max(0, Math.min(sz.x, boundary - r.left));
-  const clip = 'inset(0px ' + (sz.x - w) + 'px 0px 0px)';
+  const x0 = Math.round(cRect.left - r.left);
+  const y0 = Math.round(cRect.top - r.top);
+  const x1 = Math.round(boundary - r.left);
+  const y1 = y0 + sz.y;
+  const clip = 'polygon(' + x0 + 'px ' + y0 + 'px, ' + x1 + 'px ' + y0 + 'px, ' +
+               x1 + 'px ' + y1 + 'px, ' + x0 + 'px ' + y1 + 'px)';
   tilePaneEl.style.clipPath = clip;
   tilePaneEl.style.webkitClipPath = clip;
   bar.style.left = swipePct + '%';
