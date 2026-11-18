@@ -143,6 +143,10 @@
   </div>
 
   <hr>
+  <label>底图 <select id="base">
+    <option value="none">空白</option>
+    <option value="osm">OpenStreetMap</option>
+  </select></label>
   <label><input type="checkbox" id="boost">额外提亮（屏幕偏暗时用）</label>
   <div class="row">透明度
     <input type="range" id="opa" min="20" max="100" value="100" style="flex:1">
@@ -228,6 +232,7 @@ const YEARDEF = {
 };
 const BASE_CHOICES = [
   ['none',   '空白'],
+  ['osm',    'OpenStreetMap'],
   ['1966',   '1966-08-22'],
   ['1978',   '1978-07-28'],
   ['1984',   '1984-01-03']
@@ -255,7 +260,11 @@ const mapB = makeMap('mapB');
 /* ---------------- 底图 ---------------- */
 const tdtCache = [];
 function makeBase(kind, pane) {
-  return null;                       // 不再使用任何在线底图，始终空白
+  if (kind !== 'osm') return null;
+  return L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    minZoom: 1, maxZoom: 18, pane: pane || 'basePane',
+    attribution: '© OpenStreetMap contributors', errorTileUrl: BLANK_PX
+  });
 }
 
 /* ---------------- 年份图层（可指定 pane） ---------------- */
@@ -321,6 +330,13 @@ function clearLayers(m) {
 function applyBase() {
   baseLayers.forEach(l => { if (l) { mapA.removeLayer(l); mapB.removeLayer(l); } });
   baseLayers = [];
+  const kind = (document.getElementById('base') || {}).value || 'none';
+  const a = makeBase(kind, 'basePane');
+  if (a) { a.addTo(mapA); baseLayers.push(a); }
+  if (state.mode === 'dual') {
+    const b = makeBase(kind, 'basePane');
+    if (b) { b.addTo(mapB); baseLayers.push(b); }
+  }
 }
 
 function yearPanes() {
@@ -370,8 +386,8 @@ function renderSwipe() {
   yearLayers = [];
   const t = document.getElementById('topSel').value;
   const b = document.getElementById('botSel').value;
-  swipeTop = (t === 'base' || t === 'none') ? null : makeYear(t, 'topPane', null);
-  swipeBot = (b === 'base' || b === 'none') ? null : makeYear(b, 'botPane', null);
+  swipeTop = (t === 'none') ? null : (t === 'osm' ? makeBase('osm', 'topPane') : makeYear(t, 'topPane', null));
+  swipeBot = (b === 'none') ? null : (b === 'osm' ? makeBase('osm', 'botPane') : makeYear(b, 'botPane', null));
   if (swipeTop) { swipeTop.addTo(mapA); yearLayers.push(swipeTop); }
   if (swipeBot) { swipeBot.addTo(mapA); yearLayers.push(swipeBot); }
   document.querySelector('#swipeBar .tag.l').textContent = labelOf(t);
@@ -380,7 +396,8 @@ function renderSwipe() {
   applySwipe();
 }
 function labelOf(k) {
-  if (k === 'base' || k === 'none') return '空白';
+  if (k === 'none' || k === 'base') return '空白';
+  if (k === 'osm') return 'OpenStreetMap';
   return YEARDEF[k] ? YEARDEF[k].name : k;
 }
 
@@ -390,8 +407,8 @@ function renderDual() {
   yearLayers = [];
   const lk = document.getElementById('leftSel').value;
   const rk = document.getElementById('rightSel').value;
-  leftLayer = (lk === 'base' || lk === 'none') ? null : makeYear(lk, 'yrPane', null);
-  rightLayer = (rk === 'base' || rk === 'none') ? null : makeYear(rk, 'yrPane', null);
+  leftLayer = (lk === 'none') ? null : (lk === 'osm' ? makeBase('osm', 'yrPane') : makeYear(lk, 'yrPane', null));
+  rightLayer = (rk === 'none') ? null : (rk === 'osm' ? makeBase('osm', 'yrPane') : makeYear(rk, 'yrPane', null));
   if (leftLayer) { leftLayer.addTo(mapA); yearLayers.push(leftLayer); }
   if (rightLayer) { rightLayer.addTo(mapB); yearLayers.push(rightLayer); }
   document.getElementById('chipA').textContent = labelOf(lk);
@@ -615,6 +632,12 @@ document.getElementById('year').onchange = e => {
 document.getElementById('opa').oninput = e => {
   state.opa = Math.max(0.05, Math.min(1, parseInt(e.target.value, 10) / 100));
   applyLook();
+};
+const baseSel = document.getElementById('base');
+if (baseSel) baseSel.onchange = () => {
+  applyBase();
+  if (state.mode === 'swipe') renderSwipe();
+  if (state.mode === 'dual') renderDual();
 };
 document.getElementById('boost').onchange = e => {
   state.boost = e.target.checked;
