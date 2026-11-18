@@ -145,6 +145,9 @@
   <hr>
   <label>底图（两侧共用） <select id="base">
     <option value="none">空白</option>
+    <option value="tdt_img">天地图 · 影像</option>
+    <option value="tdt_vec">天地图 · 矢量</option>
+    <option value="tdt_ter">天地图 · 地形</option>
     <option value="osm">OpenStreetMap</option>
   </select></label>
   <label><input type="checkbox" id="boost">额外提亮（屏幕偏暗时用）</label>
@@ -164,7 +167,7 @@
   <button id="aboutBtn" title="数据说明">i</button>
 </div>
 <div id="about">
-  <b style="color:#2f6fd0">页面版本 v4</b><br>
+  <b style="color:#2f6fd0">页面版本 v5</b><br>
   <b>数据来源</b><br>
   USGS EarthExplorer「Declassified Satellite Imagery 3」，黑白负片扫描：<br>
   · <b>1966-08-22</b>　<code>DZB00403100086H012002</code> c / d 两幅<br>
@@ -232,6 +235,9 @@ const YEARDEF = {
 };
 const BASE_CHOICES = [
   ['none',   '无'],
+  ['tdt_img', '天地图 · 影像'],
+  ['tdt_vec', '天地图 · 矢量'],
+  ['tdt_ter', '天地图 · 地形'],
   ['osm',    'OpenStreetMap'],
   ['1966',   '1966-08-22'],
   ['1978',   '1978-07-28'],
@@ -259,12 +265,37 @@ const mapB = makeMap('mapB');
 
 /* ---------------- 底图 ---------------- */
 const tdtCache = [];
-function makeBase(kind, pane) {
-  if (kind !== 'osm') return null;
-  return L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    minZoom: 1, maxZoom: 18, pane: pane || 'basePane',
-    attribution: '© OpenStreetMap contributors', errorTileUrl: BLANK_PX
+/* 天地图 key：https://console.tianditu.gov.cn 免费申请后替换 */
+const TDT_KEY = '4267820f43926eaf808d61dc07269beb';
+let tdtErr = 0;
+function tdtTile(layer, path, pane) {
+  const l = L.tileLayer(
+    'https://t{s}.tianditu.gov.cn/' + path + '/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0' +
+    '&LAYER=' + layer + '&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles' +
+    '&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=' + TDT_KEY,
+    {subdomains: '01234567', minZoom: 1, maxZoom: 18, pane: pane || 'basePane',
+     attribution: '© 天地图', errorTileUrl: BLANK_PX});
+  l.on('tileerror', () => {
+    tdtErr += 1;
+    if (tdtErr === 6) {
+      const tip = document.getElementById('tip');
+      if (tip) tip.textContent = '天地图瓦片加载失败（key 配额 / 网络），可切到 OpenStreetMap';
+    }
   });
+  return l;
+}
+function makeBase(kind, pane) {
+  if (!kind || kind === 'none') return null;
+  if (kind === 'osm') {
+    return L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      minZoom: 1, maxZoom: 18, pane: pane || 'basePane',
+      attribution: '© OpenStreetMap contributors', errorTileUrl: BLANK_PX
+    });
+  }
+  const pairs = {tdt_img: ['img', 'cia'], tdt_vec: ['vec', 'cva'], tdt_ter: ['ter', 'cta']};
+  const pair = pairs[kind];
+  if (!pair) return null;
+  return L.layerGroup([tdtTile(pair[0], pair[0] + '_w', pane), tdtTile(pair[1], pair[1] + '_w', pane)]);
 }
 
 /* ---------------- 年份图层（可指定 pane） ---------------- */
@@ -386,8 +417,8 @@ function renderSwipe() {
   yearLayers = [];
   const t = document.getElementById('topSel').value;
   const b = document.getElementById('botSel').value;
-  swipeTop = (t === 'none') ? null : (t === 'osm' ? makeBase('osm', 'topPane') : makeYear(t, 'topPane', null));
-  swipeBot = (b === 'none') ? null : (b === 'osm' ? makeBase('osm', 'botPane') : makeYear(b, 'botPane', null));
+  swipeTop = (t === 'none') ? null : (YEARDEF[t] ? makeYear(t, 'topPane', null) : makeBase(t, 'topPane'));
+  swipeBot = (b === 'none') ? null : (YEARDEF[b] ? makeYear(b, 'botPane', null) : makeBase(b, 'botPane'));
   if (swipeTop) { swipeTop.addTo(mapA); yearLayers.push(swipeTop); }
   if (swipeBot) { swipeBot.addTo(mapA); yearLayers.push(swipeBot); }
   document.querySelector('#swipeBar .tag.l').textContent = labelOf(t);
@@ -398,6 +429,9 @@ function renderSwipe() {
 function labelOf(k) {
   if (k === 'none' || k === 'base') return '无';
   if (k === 'osm') return 'OpenStreetMap';
+  if (k === 'tdt_img') return '天地图 · 影像';
+  if (k === 'tdt_vec') return '天地图 · 矢量';
+  if (k === 'tdt_ter') return '天地图 · 地形';
   return YEARDEF[k] ? YEARDEF[k].name : k;
 }
 
@@ -407,8 +441,8 @@ function renderDual() {
   yearLayers = [];
   const lk = document.getElementById('leftSel').value;
   const rk = document.getElementById('rightSel').value;
-  leftLayer = (lk === 'none') ? null : (lk === 'osm' ? makeBase('osm', 'yrPane') : makeYear(lk, 'yrPane', null));
-  rightLayer = (rk === 'none') ? null : (rk === 'osm' ? makeBase('osm', 'yrPane') : makeYear(rk, 'yrPane', null));
+  leftLayer = (lk === 'none') ? null : (YEARDEF[lk] ? makeYear(lk, 'yrPane', null) : makeBase(lk, 'yrPane'));
+  rightLayer = (rk === 'none') ? null : (YEARDEF[rk] ? makeYear(rk, 'yrPane', null) : makeBase(rk, 'yrPane'));
   if (leftLayer) { leftLayer.addTo(mapA); yearLayers.push(leftLayer); }
   if (rightLayer) { rightLayer.addTo(mapB); yearLayers.push(rightLayer); }
   document.getElementById('chipA').textContent = labelOf(lk);
@@ -689,7 +723,7 @@ rotBtn.onclick = async () => {
   setTimeout(() => { tip.textContent = ''; }, 4000);
 };
 
-document.title = document.title + ' · v4';
+document.title = document.title + ' · v5';
 /* ---------------- 初始化 ---------------- */
 const chipA = document.createElement('div');
 chipA.className = 'chip'; chipA.id = 'chipA'; chipA.style.display = 'none';
