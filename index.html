@@ -71,7 +71,7 @@
     <input type="range" id="opa" min="20" max="100" value="100" style="flex:1">
     <span class="val" id="opaVal">100</span>
   </div>
-  <div class="sub" id="tip" style="margin-top:4px">z10–z16 全幅；z17 仅武汉三镇 / 鄂州城区</div>
+  <div class="sub" id="tip" style="margin-top:4px"></div>
 </div>
 
 <button id="aboutBtn" title="数据说明">i</button>
@@ -400,10 +400,6 @@ map.on('mousemove', ev => {
 });
 map.on('zoomend', () => {
   syncCity();
-  const z = map.getZoom();
-  document.getElementById('tip').textContent = z >= 17
-    ? 'z' + z + '：城区为 z17 原生，其余为 z16 拉伸'
-    : 'z10–z16 全幅；z17 仅武汉三镇 / 鄂州城区';
 });
 
 /* ---------- 初始化 ---------- */
