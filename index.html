@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1978 · 武汉 KH-9 解密影像</title>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<style>
+  html,body{margin:0;height:100%;font-family:"Microsoft YaHei",system-ui,sans-serif}
+  #map{position:absolute;inset:0;background:#1c1f23}
+  .panel{position:absolute;top:12px;left:12px;z-index:1000;background:rgba(255,255,255,.95);
+         border-radius:10px;padding:10px 12px;box-shadow:0 2px 12px rgba(0,0,0,.3);font-size:13px;line-height:1.7;
+         max-width:280px}
+  .panel h1{margin:0 0 2px;font-size:15px;font-weight:700;letter-spacing:.3px}
+  .panel .sub{color:#7b7b7b;font-size:11px;line-height:1.55}
+  .panel label{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+  .panel hr{border:0;border-top:1px solid #e6e6e6;margin:7px 0}
+  .panel select{font-size:12px;padding:2px 4px;border-radius:4px;border:1px solid #ccc;background:#fff;flex:1}
+  .panel .row{display:flex;align-items:center;gap:8px}
+  .panel .row .val{color:#666;font-size:11px;width:34px;text-align:right;font-variant-numeric:tabular-nums}
+  #hint{position:absolute;bottom:12px;left:12px;z-index:1000;background:rgba(255,255,255,.9);
+        border-radius:8px;padding:6px 10px;font-size:12px;color:#444;font-variant-numeric:tabular-nums}
+  #about{position:absolute;top:12px;right:12px;z-index:1000;background:rgba(255,255,255,.95);
+         border-radius:10px;padding:8px 10px;box-shadow:0 2px 12px rgba(0,0,0,.25);font-size:12px;
+         line-height:1.65;color:#333;max-width:300px;display:none}
+  #aboutBtn{position:absolute;top:12px;right:12px;z-index:1001;width:26px;height:26px;border-radius:50%;
+            border:0;background:rgba(255,255,255,.95);box-shadow:0 2px 8px rgba(0,0,0,.25);
+            cursor:pointer;font-size:14px;color:#555;line-height:1}
+  /* 卷帘 */
+  #swipeBar{position:absolute;top:0;bottom:0;width:0;z-index:1200;display:none;pointer-events:none}
+  #swipeBar.on{display:block}
+  #swipeBar .hit{position:absolute;top:0;bottom:0;left:-16px;width:32px;pointer-events:auto;cursor:ew-resize}
+  #swipeBar .line{position:absolute;top:0;bottom:0;left:-1px;width:3px;background:#e8b64c;
+                  box-shadow:0 0 0 1px rgba(0,0,0,.45),0 0 8px rgba(0,0,0,.5)}
+  #swipeBar .knob{position:absolute;top:50%;left:-15px;margin-top:-15px;width:30px;height:30px;
+                  border-radius:50%;background:#e8b64c;border:2px solid #fff;pointer-events:none;
+                  box-shadow:0 1px 6px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;
+                  font-size:13px;color:#3a2a00}
+  #swipeBar.dragging .knob{background:#ffd166;transform:scale(1.12)}
+  #swipeBar .tag{position:absolute;top:12px;white-space:nowrap;background:rgba(255,255,255,.9);
+                 border-radius:4px;padding:2px 7px;font-size:12px;color:#333;pointer-events:none}
+  #swipeBar .tag.l{left:-96px}
+  #swipeBar .tag.r{left:8px}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="panel">
+  <h1>武汉 · KH-9 解密影像</h1>
+  <label style="margin-top:5px">年份 <select id="year">
+    <option value="1978">1978-07-28</option>
+    <option value="1984">1984-01-03</option>
+  </select></label>
+  <div id="sceneBox" style="display:none">
+    <label><input type="checkbox" id="c003" checked>A003 北景</label>
+    <label><input type="checkbox" id="c004" checked>A004 南景</label>
+  </div>
+  <div class="sub" id="sceneSub">USGS Declass 3 · 1978-07-28</div>
+  <hr>
+  <label>底图 <select id="base">
+    <option value="tdt_img">天地图 · 影像</option>
+    <option value="tdt_vec">天地图 · 矢量</option>
+    <option value="tdt_ter">天地图 · 地形</option>
+    <option value="osm">OpenStreetMap</option>
+    <option value="none">无（深色）</option>
+  </select></label>
+  <label><input type="checkbox" id="swipe">卷帘对比（左：1978 / 右：底图）</label>
+  <label><input type="checkbox" id="boost">额外提亮（屏幕偏暗时用）</label>
+  <div class="row">透明度
+    <input type="range" id="opa" min="20" max="100" value="100" style="flex:1">
+    <span class="val" id="opaVal">100</span>
+  </div>
+  <div class="sub" id="tip" style="margin-top:4px">z10–z16 全幅；z17 仅武汉三镇 / 鄂州城区</div>
+</div>
+
+<button id="aboutBtn" title="数据说明">i</button>
+<div id="about">
+  <b>数据来源</b><br>
+  美国地质调查局（USGS）EarthExplorer「Declassified Satellite Imagery 3」，黑白负片扫描：<br>
+  · <b>1978-07-28</b>　<code>D3C1214-401032F004</code>（任务 1214-4，第 4 帧，a/b/c 三段）<br>
+  · <b>1984-01-03</b>　<code>D3C1218-301275A003</code> + <code>A004</code>（任务 1218，两景各 a/b/c 三段）
+  <hr style="border:0;border-top:1px solid #e6e6e6;margin:6px 0">
+  <b>处理</b><br>
+  每段扫描件按控制点在 ArcGIS 里配准（3 阶多项式），再逐段烘到 WGS84 / Web Mercator 拼接；
+  片边黑框与画布空白按 nodata 处理、由相邻段回填，最后做百分比截断拉伸（1% / 0.25%）并切 WebP 瓦片。
+  <hr style="border:0;border-top:1px solid #e6e6e6;margin:6px 0">
+  <b>精度</b><br>
+  控制点配准，非正射纠正；地形高差与卫星侧视会引起局部错位（山区尤甚），
+  适合叠加浏览与比对，<b>不作量测依据</b>。
+  <hr style="border:0;border-top:1px solid #e6e6e6;margin:6px 0">
+  <b>覆盖</b><br>
+  1978：113.80–115.01°E / 30.40–30.72°N（武汉三镇—鄂州）<br>
+  1984：113.71–114.65°E / 30.38–30.78°N（汉口北—黄陂—孝感南）<br>
+  USGS 另有若干 d 段（无控制点）未纳入。
+  <hr style="border:0;border-top:1px solid #e6e6e6;margin:6px 0">
+  <b>图层用法</b><br>
+  QGIS：XYZ Tiles → <code>…/xyz_1978_webp/{z}/{x}/{y}.webp</code>（z9–16）、
+  <code>…/xyz_1978_z17/…</code>（城区）、<code>…/xyz_1984_webp/…</code>（z9–16）
+</div>
+
+<div id="swipeBar"><div class="hit"></div><div class="line"></div><div class="knob">⇔</div>
+  <div class="tag l">1978</div><div class="tag r">底图</div></div>
+<div id="hint">滚轮缩放 · 拖动平移</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script>
+/* ===== 天地图 key：https://console.tianditu.gov.cn 免费申请后替换 ===== */
+const TDT_KEY = '4267820f43926eaf808d61dc07269beb';
+
+const qs = new URLSearchParams(location.search);
+const map = L.map('map', {
+  center: [parseFloat(qs.get('lat') || 30.560), parseFloat(qs.get('lon') || 114.32)],
+  zoom: parseInt(qs.get('z') || 11),
+  minZoom: 8, maxZoom: 18
+});
+map.createPane('basePane');  map.getPane('basePane').style.zIndex = 150;
+map.createPane('histPane');  map.getPane('histPane').style.zIndex = 300;
+const histPane = map.getPane('histPane');
+const basePane = map.getPane('basePane');
+
+/* ---------- 底图：天地图影像 / 矢量 / 地形 / OSM / 无 ---------- */
+const BLANK_PX = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+const TDT_LAYERS = {
+  tdt_img: ['img', 'img_w', 'cia', 'cia_w'],
+  tdt_vec: ['vec', 'vec_w', 'cva', 'cva_w'],
+  tdt_ter: ['ter', 'ter_w', 'cta', 'cta_w']
+};
+let tileErr = 0;
+function onTileError() {
+  tileErr += 1;
+  if (tileErr === 6) {
+    document.getElementById('tip').textContent =
+      '底图有图层加载失败（天地图 key 配额 / 网络），可先切到 OpenStreetMap';
+  }
+}
+function tdtTile(layer, path) {
+  const l = L.tileLayer(
+    'https://t{s}.tianditu.gov.cn/' + path + '/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0' +
+    '&LAYER=' + layer + '&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles' +
+    '&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=' + TDT_KEY,
+    {subdomains: '01234567', minZoom: 1, maxZoom: 18, pane: 'basePane',
+     attribution: '© 天地图', errorTileUrl: BLANK_PX});
+  l.on('tileerror', onTileError);
+  return l;
+}
+const BASEMAPS = {
+  none: () => null,
+  tdt_img: () => L.layerGroup([tdtTile('img', 'img_w'), tdtTile('cia', 'cia_w')]),
+  tdt_vec: () => L.layerGroup([tdtTile('vec', 'vec_w'), tdtTile('cva', 'cva_w')]),
+  tdt_ter: () => L.layerGroup([tdtTile('ter', 'ter_w'), tdtTile('cta', 'cta_w')]),
+  osm: () => L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          {minZoom: 1, maxZoom: 18, pane: 'basePane',
+           attribution: '© OpenStreetMap contributors'})
+};
+let baseLayer = null;
+function setBase(kind) {
+  if (baseLayer) { map.removeLayer(baseLayer); baseLayer = null; }
+  tileErr = 0;
+  if (!kind || kind === 'none') { document.getElementById('base').value = 'none'; return; }
+  if (!BASEMAPS[kind]) kind = 'tdt_img';
+  if (kind.startsWith('tdt') && !TDT_KEY) {
+    document.getElementById('tip').textContent = '没填天地图 key，已临时用 OSM';
+    kind = 'osm';
+  }
+  document.getElementById('base').value = kind;
+  baseLayer = BASEMAPS[kind]();
+  if (baseLayer) baseLayer.addTo(map);
+}
+document.getElementById('base').onchange = e => {
+  setBase(e.target.value);
+  if (swipeBox && swipeBox.checked) { applySwipe(); setTimeout(applySwipe, 250); }
+};
+document.getElementById('year').onchange = e => setYear(e.target.value);
+
+/* ---------- 年份图层：1978 / 1984（A003、A004 各一层） ---------- */
+const L1978 = L.tileLayer('xyz_1978_webp/{z}/{x}/{y}.webp?v=v3', {
+  minZoom: 10, maxZoom: 17, maxNativeZoom: 16, pane: 'histPane',
+  attribution: '1978-07-28 · USGS D3C1214-401032F004'
+});
+const L84 = {
+  '003': L.tileLayer('xyz_1984_003_webp/{z}/{x}/{y}.webp?v=v3', {
+    minZoom: 9, maxZoom: 16, maxNativeZoom: 16, pane: 'histPane',
+    attribution: '1984-01-03 · USGS D3C1218-301275A003'
+  }),
+  '004': L.tileLayer('xyz_1984_004_webp/{z}/{x}/{y}.webp?v=v3', {
+    minZoom: 9, maxZoom: 16, maxNativeZoom: 16, pane: 'histPane',
+    attribution: '1984-01-03 · USGS D3C1218-301275A004'
+  })
+};
+const SUB = {
+  1978: '1978-07-28 · 相机 F · 原片 2–4 ft<br>a+b+c 三段拼接 · 113.80–115.01°E / 30.40–30.72°N',
+  1984: '1984-01-03 · 原片 ≈2.0 m<br>A003 北景 / A004 南景（两层）· 113.69–114.65°E / 30.38–30.80°N'
+};
+let activeYear = 1978;
+
+function applyYear() {
+  const y = activeYear;
+  [L1978, L84['003'], L84['004']].forEach(l => { if (map.hasLayer(l)) map.removeLayer(l); });
+  const box = document.getElementById('sceneBox');
+  if (y === 1978) {
+    box.style.display = 'none';
+    L1978.addTo(map);
+  } else {
+    box.style.display = 'block';
+    if (document.getElementById('c003').checked) L84['003'].addTo(map);
+    if (document.getElementById('c004').checked) L84['004'].addTo(map);
+  }
+  document.getElementById('year').value = String(y);
+  document.getElementById('sceneSub').innerHTML = SUB[y];
+  const tag = document.querySelector('#swipeBar .tag.l');
+  if (tag) tag.textContent = String(y);
+  syncCity();
+}
+function setYear(y) { activeYear = (y == 1984) ? 1984 : 1978; applyYear(); }
+document.getElementById('c003').onchange = applyYear;
+document.getElementById('c004').onchange = applyYear;
+
+/* ---------- z17：只在城区圈内切片 ---------- */
+const CITY_BOX = [
+  [114.243, 30.512, 114.368, 30.612],   // 武汉三镇（汉口 / 武昌 / 汉阳）
+  [114.372, 30.505, 114.452, 30.570],   // 青山 / 洪山
+  [114.845, 30.352, 114.945, 30.432]    // 鄂州 / 黄州
+];
+const BLANK = BLANK_PX;
+const CityLayer = L.TileLayer.extend({
+  getTileUrl: function (c) {
+    const n = Math.pow(2, c.z);
+    const lonW = c.x / n * 360 - 180, lonE = (c.x + 1) / n * 360 - 180;
+    const latN = Math.atan(Math.sinh(Math.PI * (1 - 2 * c.y / n))) * 180 / Math.PI;
+    const latS = Math.atan(Math.sinh(Math.PI * (1 - 2 * (c.y + 1) / n))) * 180 / Math.PI;
+    for (let i = 0; i < CITY_BOX.length; i++) {
+      const b = CITY_BOX[i];
+      if (lonE > b[0] && lonW < b[2] && latN > b[1] && latS < b[3]) {
+        return 'xyz_1978_z17/' + c.z + '/' + c.x + '/' + c.y + '.webp?v=' + TILE_V;
+      }
+    }
+    return BLANK;
+  }
+});
+const cityTiles = new CityLayer('', {minZoom: 17, maxZoom: 18, maxNativeZoom: 17,
+                                     pane: 'histPane'});
+function syncCity() {
+  const on = (activeYear == 1978) && map.getZoom() >= 17;
+  if (on) { if (!map.hasLayer(cityTiles)) cityTiles.addTo(map); }
+  else if (map.hasLayer(cityTiles)) { map.removeLayer(cityTiles); }
+}
+
+/* ---------- 额外提亮（瓦片本身已做百分比截断，这里只是屏幕偏暗时的补丁） ---------- */
+function applyBoost() {
+  histPane.style.filter = document.getElementById('boost').checked
+    ? 'brightness(1.10) contrast(1.06) saturate(0)' : '';
+}
+document.getElementById('boost').onchange = applyBoost;
+
+/* ---------- 透明度（直接改 pane 的 opacity，最稳） ---------- */
+function applyOpacity(v) {
+  const o = Math.max(0.05, Math.min(1, v));
+  histPane.style.opacity = o;
+  document.getElementById('opaVal').textContent = Math.round(o * 100);
+  document.getElementById('opa').value = Math.round(o * 100);
+}
+let opaTimer = null;
+document.getElementById('opa').oninput = e => {
+  applyOpacity(parseInt(e.target.value, 10) / 100);
+};
+
+/* ---------- 卷帘（与 hubei5w 同一套：两个 pane 各裁一半，拖中轴） ---------- */
+const bar = document.getElementById('swipeBar');
+const tilePaneEl = histPane;                 // 1978 / 1984 图层所在的 pane
+const basePaneEl = map.getPane('basePane');
+const swipeBox = document.getElementById('swipe');
+let swipePct = 50;
+
+function paneSize() {
+  const sz = map.getSize();
+  [tilePaneEl, basePaneEl].forEach(el => {
+    el.style.width = sz.x + 'px';
+    el.style.height = sz.y + 'px';
+  });
+}
+
+function applySwipe() {
+  const on = swipeBox.checked;
+  bar.classList.toggle('on', on);
+  [tilePaneEl, basePaneEl].forEach(el => {
+    if (!el) return;
+    el.style.clipPath = '';
+    if (!on) { el.style.clip = ''; }
+  });
+  if (!on) return;
+
+  // Leaflet 的 pane 跟随 .leaflet-map-pane 平移，裁剪边界要按 pane 当前屏幕位置反算
+  const sz = map.getSize();
+  const cRect = map.getContainer().getBoundingClientRect();
+  const boundary = cRect.left + sz.x * swipePct / 100;
+  [tilePaneEl, basePaneEl].forEach(el => {
+    if (!el) return;
+    el.style.width = sz.x + 'px';
+    el.style.height = sz.y + 'px';
+    el.style.clip = '';
+    el.style.clipPath = '';
+  });
+  const clipFor = (el, keepLeft) => {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const w = Math.max(0, Math.min(sz.x, boundary - r.left));
+    el.style.clipPath = keepLeft
+      ? 'inset(0px ' + (sz.x - w) + 'px 0px 0px)'
+      : 'inset(0px 0px 0px ' + w + 'px)';
+  };
+  clipFor(tilePaneEl, true);
+  clipFor(basePaneEl, false);
+  bar.style.left = swipePct + '%';
+}
+
+function setSwipePct(clientX) {
+  const r = map.getContainer().getBoundingClientRect();
+  swipePct = Math.min(98, Math.max(2, (clientX - r.left) / r.width * 100));
+  applySwipe();
+}
+
+let dragging = false;
+function startDrag(e) {
+  if (!swipeBox.checked) return;
+  dragging = true;
+  bar.classList.add('dragging');
+  map.dragging.disable();
+  document.body.style.cursor = 'ew-resize';
+  moveDrag(e);
+  if (e.cancelable) e.preventDefault();
+  e.stopPropagation();
+}
+function moveDrag(e) {
+  if (!dragging) return;
+  if (e.buttons === 0 && !e.touches) { endDrag(); return; }
+  const t = e.touches ? e.touches[0] : e;
+  if (!t) return;
+  setSwipePct(t.clientX);
+  if (e.cancelable) e.preventDefault();
+}
+function endDrag() {
+  if (!dragging) return;
+  dragging = false;
+  bar.classList.remove('dragging');
+  map.dragging.enable();
+  document.body.style.cursor = '';
+}
+
+const hit = bar.querySelector('.hit');
+hit.addEventListener('mousedown', startDrag);
+hit.addEventListener('touchstart', startDrag, {passive: false});
+hit.addEventListener('dragstart', e => e.preventDefault());
+window.addEventListener('mousemove', moveDrag);
+window.addEventListener('touchmove', moveDrag, {passive: false});
+window.addEventListener('mouseup', endDrag);
+window.addEventListener('touchend', endDrag);
+window.addEventListener('touchcancel', endDrag);
+window.addEventListener('blur', endDrag);
+bar.addEventListener('mousedown', e => e.stopPropagation());
+
+swipeBox.onchange = () => {
+  applySwipe();
+  setTimeout(applySwipe, 120);
+  setTimeout(applySwipe, 400);
+};
+map.on('resize zoomend moveend move', applySwipe);
+
+/* ---------- 杂项 ---------- */
+document.getElementById('aboutBtn').onclick = () => {
+  const a = document.getElementById('about');
+  a.style.display = a.style.display === 'block' ? 'none' : 'block';
+};
+map.on('mousemove', ev => {
+  document.getElementById('hint').textContent =
+    'N' + ev.latlng.lat.toFixed(4) + '  E' + ev.latlng.lng.toFixed(4) + '  ·  z' + map.getZoom();
+});
+map.on('zoomend', () => {
+  syncCity();
+  const z = map.getZoom();
+  document.getElementById('tip').textContent = z >= 17
+    ? 'z' + z + '：城区为 z17 原生，其余为 z16 拉伸'
+    : 'z10–z16 全幅；z17 仅武汉三镇 / 鄂州城区';
+});
+
+/* ---------- 初始化 ---------- */
+if (!qs.get('z') && !qs.get('lat')) {
+  map.fitBounds([[30.392, 113.785], [30.718, 114.998]], {padding: [24, 24]});
+}
+paneSize();
+applyBoost();
+applyOpacity(qs.get('opa') ? parseInt(qs.get('opa')) / 100 : 1);
+setBase(qs.get('base') || 'tdt_img');
+setYear(qs.get('y') || 1978);
+map.on('resize', () => { paneSize(); applySwipe(); });
+
+if (qs.get('swipe') === '1' || qs.get('swipe') === 'true') {
+  swipeBox.checked = true;
+  if (qs.get('pos')) {
+    const v = parseFloat(qs.get('pos'));
+    if (isFinite(v)) swipePct = Math.min(98, Math.max(2, v));
+  }
+  applySwipe();
+}
+</script>
+</body>
+</html>
