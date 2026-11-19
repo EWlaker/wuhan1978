@@ -739,7 +739,7 @@ document.getElementById('mapB').appendChild(chipB);
 document.getElementById('boost').checked = state.boost;
 const isPhone = window.matchMedia('(max-width: 760px)').matches;
 const baseEl = document.getElementById('base');
-if (baseEl && !qs.get('base')) baseEl.value = isPhone ? 'tdt_img' : 'none';
+if (baseEl && !qs.get('base')) baseEl.value = 'tdt_img';
 if (qs.get('y')) document.getElementById('year').value = qs.get('y');
 if (qs.get('top')) document.getElementById('topSel').value = qs.get('top');
 if (qs.get('bottom')) document.getElementById('botSel').value = qs.get('bottom');
