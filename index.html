@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>武汉 · KH-9 解密影像（1966 / 1978 / 1984）</title>
+<title>武汉 · 解密卫星影像（1966 / 1978 / 1984）</title>
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <style>
   html,body{margin:0;height:100%;font-family:"Microsoft YaHei",system-ui,sans-serif}
@@ -107,7 +107,7 @@
 <div id="stage"><div id="mapA"></div><div id="mapB"></div></div>
 
 <div class="panel">
-  <h1 id="panelTitle">武汉 · KH-9 解密影像<span class="fold">▾</span></h1>
+  <h1 id="panelTitle">武汉 · 解密卫星影像<span class="fold">▾</span></h1>
   <div id="panelBody">
 
   <!-- 单图 -->
@@ -168,19 +168,23 @@
 </div>
 <div id="about">
   <b>数据来源</b><br>
-  USGS EarthExplorer「Declassified Satellite Imagery 3」，黑白负片扫描：<br>
-  · <b>1966-08-22</b>　<code>DZB00403100086H012002</code> c / d 两幅<br>
-  · <b>1978-07-28</b>　<code>D3C1214-401032F004</code>（a/b/c 三段）<br>
-  · <b>1984-01-03</b>　<code>D3C1218-301275A003</code> + <code>A004</code>
+  美国地质调查局 USGS EarthExplorer 解密侦察卫星影像（黑白负片扫描）：<br>
+  · <b>1966-08-22</b>　<a href="https://earthexplorer.usgs.gov/scene/metadata/full/5e839ff7d71d4811/DZB00403100086H012002/" target="_blank" rel="noopener">DZB00403100086H012002</a><br>
+  　KH-7 高分辨率侦察相机 · 星下点 30.68°N / 114.33°E · 4 段（用 c、d）<br>
+  · <b>1978-07-28</b>　<a href="https://earthexplorer.usgs.gov/scene/metadata/full/5e7c41f3ffaaf662/D3C1214-401032F004/" target="_blank" rel="noopener">D3C1214-401032F004</a><br>
+  　KH-9 相机 F · 任务 1214-4 · 星下点 30.52°N / 114.55°E（a/b/c）<br>
+  · <b>1984-01-03</b>　<a href="https://earthexplorer.usgs.gov/scene/metadata/full/5e7c41f3ffaaf662/D3C1218-301275A003/" target="_blank" rel="noopener">D3C1218-301275A003</a>
+  与 <a href="https://earthexplorer.usgs.gov/scene/metadata/full/5e7c41f3ffaaf662/D3C1218-301275A004/" target="_blank" rel="noopener">A004</a><br>
+  　KH-9 相机 A · 任务 1218-3 · 星下点 30.66°N / 114.10°E（两景各 a/b/c）
   <hr style="border:0;border-top:1px solid #e6e6e6;margin:6px 0">
   <b>处理</b><br>
   各段按控制点做三阶多项式配准（ArcGIS），烘到 WGS84 / Web Mercator；
-  片框外与胶片黑边按 nodata 处理，小破洞邻域插值补平；<b>像素值原样输出</b>（不做拉伸）。
+  片框外与胶片黑边按 nodata 处理，小破洞邻域插值补平；像素值原样输出（不做拉伸）。
   <hr style="border:0;border-top:1px solid #e6e6e6;margin:6px 0">
   <b>精度</b><br>
   控制点配准，非正射纠正；地形高差会引起局部错位（山区尤甚），适合叠加浏览与比对，<b>不作量测依据</b>。
   <hr style="border:0;border-top:1px solid #e6e6e6;margin:6px 0">
-  <b>覆盖</b><br>
+  <b>成图范围</b><br>
   1966：114.13–114.57°E / 30.32–30.80°N<br>
   1978：113.80–115.01°E / 30.40–30.72°N<br>
   1984：113.69–114.65°E / 30.38–30.80°N<br>
@@ -200,7 +204,7 @@ const qs = new URLSearchParams(location.search);
 const YEARDEF = {
   '1966': {
     name: '1966-08-22',
-    sub: '1966-08-22 · 原片 ≈2.5 m<br>c / d 两幅 · 114.13–114.57°E / 30.32–30.80°N',
+    sub: '1966-08-22 · KH-7 · 原片 2–4 ft<br>c / d 两幅 · 114.13–114.57°E / 30.32–30.80°N',
     scenes: {
       '1966c': {url: 'xyz_1966_c_webp/{z}/{x}/{y}.webp?v=v7', minZoom: 10, attr: '1966 · c 幅'},
       '1966d': {url: 'xyz_1966_d_webp/{z}/{x}/{y}.webp?v=v7', minZoom: 10, attr: '1966 · d 幅'}
@@ -212,7 +216,7 @@ const YEARDEF = {
   },
   '1978': {
     name: '1978-07-28',
-    sub: '1978-07-28 · 相机 F · 原片 2–4 ft<br>a+b+c 三段拼接 · 113.80–115.01°E / 30.40–30.72°N',
+    sub: '1978-07-28 · KH-9 相机 F · 原片 2–4 ft<br>a+b+c 三段拼接 · 113.80–115.01°E / 30.40–30.72°N',
     scenes: {
       '1978': {url: 'xyz_1978_webp/{z}/{x}/{y}.webp?v=v3', minZoom: 10, attr: '1978-07-28 · USGS D3C1214-401032F004'}
     },
@@ -221,7 +225,7 @@ const YEARDEF = {
   },
   '1984': {
     name: '1984-01-03',
-    sub: '1984-01-03 · 原片 ≈2.0 m<br>A003 北景 / A004 南景（两层）· 113.69–114.65°E / 30.38–30.80°N',
+    sub: '1984-01-03 · KH-9 相机 A · 原片 2–4 ft<br>A003 北景 / A004 南景（两层）· 113.69–114.65°E / 30.38–30.80°N',
     scenes: {
       '003': {url: 'xyz_1984_003_webp/{z}/{x}/{y}.webp?v=v3', minZoom: 9, attr: '1984-01-03 · USGS D3C1218-301275A003'},
       '004': {url: 'xyz_1984_004_webp/{z}/{x}/{y}.webp?v=v3', minZoom: 9, attr: '1984-01-03 · USGS D3C1218-301275A004'}
