@@ -254,7 +254,8 @@ const CITY_BOX = [
 
 /* ---------------- 两张地图 ---------------- */
 function makeMap(id) {
-  const m = L.map(id, {center: [30.560, 114.32], zoom: parseInt(qs.get('z') || 11), minZoom: 8, maxZoom: 18,
+  const m = L.map(id, {center: [parseFloat(qs.get('lat') || 30.560), parseFloat(qs.get('lon') || 114.32)],
+                       zoom: parseInt(qs.get('z') || 11), minZoom: 8, maxZoom: 18,
                        zoomControl: false, attributionControl: id === 'mapA'});
   L.control.zoom({position: 'bottomright'}).addTo(m);
   m.createPane('basePane'); m.getPane('basePane').style.zIndex = 150;
@@ -726,7 +727,6 @@ rotBtn.onclick = async () => {
   setTimeout(() => { tip.textContent = ''; }, 4000);
 };
 
-document.title = document.title;
 /* ---------------- 初始化 ---------------- */
 const chipA = document.createElement('div');
 chipA.className = 'chip'; chipA.id = 'chipA'; chipA.style.display = 'none';
