@@ -737,6 +737,9 @@ chipB.className = 'chip'; chipB.id = 'chipB'; chipB.style.display = 'none';
 document.getElementById('mapB').appendChild(chipB);
 
 document.getElementById('boost').checked = state.boost;
+const isPhone = window.matchMedia('(max-width: 760px)').matches;
+const baseEl = document.getElementById('base');
+if (baseEl && !qs.get('base')) baseEl.value = isPhone ? 'tdt_img' : 'none';
 if (qs.get('y')) document.getElementById('year').value = qs.get('y');
 if (qs.get('top')) document.getElementById('topSel').value = qs.get('top');
 if (qs.get('bottom')) document.getElementById('botSel').value = qs.get('bottom');
@@ -745,8 +748,13 @@ if (qs.get('right')) document.getElementById('rightSel').value = qs.get('right')
 
 setMode(state.mode);
 if (!qs.get('z') && !qs.get('lat')) {
-  mapA.fitBounds([[30.392, 113.785], [30.718, 114.998]], {padding: [24, 24]});
-  mapB.setView(mapA.getCenter(), mapA.getZoom(), {animate: false});
+  if (isPhone) {
+    mapA.setView([30.560, 114.30], 13, {animate: false});
+    mapB.setView([30.560, 114.30], 13, {animate: false});
+  } else {
+    mapA.fitBounds([[30.392, 113.785], [30.718, 114.998]], {padding: [24, 24]});
+    mapB.setView(mapA.getCenter(), mapA.getZoom(), {animate: false});
+  }
 }
 setTimeout(() => { applySwipe(); applyLook(); }, 200);
 </script>
