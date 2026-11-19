@@ -100,6 +100,10 @@
   @media (max-width: 760px){
     #rotBtn{display:inline-block}
   }
+
+  body.clean .panel, body.clean #toolbar, body.clean #hint,
+  body.clean .chip, body.clean #about,
+  body.clean .leaflet-control { display:none !important; }
 </style>
 </head>
 <body>
@@ -408,6 +412,7 @@ function renderSingle() {
   ['sceneBox', 'sceneBox66'].forEach(id => document.getElementById(id).style.display = 'none');
   if (y === '1984') document.getElementById('sceneBox').style.display = 'block';
   if (y === '1966') document.getElementById('sceneBox66').style.display = 'block';
+  if (qs.get('nohist') === '1') { applyLook(); return; }
   const g = makeYear(y, 'yrPane', sceneFilter(y));
   if (g) { g.addTo(mapA); yearLayers.push(g); }
   document.getElementById('sceneSub').innerHTML = YEARDEF[y].sub;
@@ -739,13 +744,15 @@ document.getElementById('mapB').appendChild(chipB);
 document.getElementById('boost').checked = state.boost;
 const isPhone = window.matchMedia('(max-width: 760px)').matches;
 const baseEl = document.getElementById('base');
-if (baseEl && !qs.get('base')) baseEl.value = 'tdt_img';
+if (baseEl) baseEl.value = qs.get('base') || 'tdt_img';
 if (qs.get('y')) document.getElementById('year').value = qs.get('y');
 if (qs.get('top')) document.getElementById('topSel').value = qs.get('top');
 if (qs.get('bottom')) document.getElementById('botSel').value = qs.get('bottom');
 if (qs.get('left')) document.getElementById('leftSel').value = qs.get('left');
 if (qs.get('right')) document.getElementById('rightSel').value = qs.get('right');
 
+
+if (qs.get('clean') === '1') document.body.classList.add('clean');
 setMode(state.mode);
 if (!qs.get('z') && !qs.get('lat')) {
   if (isPhone) {
